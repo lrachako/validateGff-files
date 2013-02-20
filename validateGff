@@ -2,42 +2,41 @@
 ##This script takes in a directory consisting of GenBank files as the input, converts them into GFF3 files, sorts, filters and validates them.
 ##The output of this script is a single GFF3 file consisting of information on the protein-coding features.
 
-set argv=(`getopt g:cd $*`)
+set argv=(`getopt g:c $*`)
 set gbkfile=0
 set cleanup=0
 set i=1
 
 while ($i < $#argv)
-        switch ($argv[$i])
-                case -g*:
-                        set gbkfile = 1
-                        @ i = $i + 1
-                        set gbkfile = $argv[$i]
-                        breaksw
-		case -c*:
-                        set cleanup = 1
-                        breaksw
-                default:
-                        breaksw
-        endsw
+    switch ($argv[$i])
+        case -g*:
+            @ i = $i + 1
+            set gbkfile = $argv[$i]
+            breaksw
+        case -c*:
+            set cleanup = 1
+            breaksw
+        default:
+            breaksw
+    endsw
 @ i = $i + 1
 end
 
 
 if ($gbkfile == 0)  then
- 	echo ""
- 	echo "USAGE: myscript -g input_directory [options]"
-	echo "Example: myscript -g gbk -o gbkfile.gff -c"
- 	echo "Options:"
- 	echo " -g   	: Directory containing file in GenBank (full) format"
-	echo " -c	: Cleanup all the intermediate file"
- exit(0)
+    echo ""
+    echo "USAGE: $0 [options]"
+    echo "Example: $0 -g gbk -c"
+    echo "Options:"
+    echo " -g        : Directory containing files in GenBank (full) format"
+    echo " -c        : Cleanup all the intermediate files"
+   exit(0)
 endif
 
 echo "1. Extracting information from the GenBank file..."
 cd $gbkfile
 foreach file(*)
-        python ../validateGff_scripts/extract_headers.py $file $file.headers
+    python ../validateGff_scripts/extract_headers.py $file $file.headers
 end
 echo "Done headers"
 mkdir headers
@@ -46,7 +45,7 @@ cat headers/* >final_headers.txt
 
 echo "2. Converting GenBank file to gff file ..."
 foreach file(*.gbk)
-  	perl ../validateGff_scripts/bp_genbank2gff3.pl -y $file
+      perl ../validateGff_scripts/bp_genbank2gff3.pl -y $file
 end
 echo "........done"
 
@@ -59,21 +58,16 @@ mv *.fa fa
 echo "3. Replacing identifiers..."
 cd gff
 foreach file(*.gff)
-	python ../../validateGff_scripts/replace_headers.py $file ../final_headers.txt $file.replaced
+    python ../../validateGff_scripts/replace_headers.py $file ../final_headers.txt $file.replaced
 end
 echo "........done"
 
 echo "4. Sorting the features..."
 foreach file(*.replaced)
-	perl ../../validateGff_scripts/mygffsort.pl $file >$file.sorted
+    perl ../../validateGff_scripts/mygffsort.pl $file >$file.sorted
 echo "........done"
 
 cat *.sorted >file_sorted.gff
-
-#echo "4. Sorting the features..."
-#perl ../../validateGff_scripts/mygffsort.pl final_file.gff >file_sorted.gff
-#echo "........done"
-
 perl -ne '@f = split(/\t/); if(scalar(@f) == 9){ print if($f[2] eq "gene" or $f[2] eq "mRNA" or $f[2] eq "CDS" or $f[2] eq "exon"); }'<file_sorted.gff >file.gff
 
 echo "5. Replacing the ID and Parent tags..."
@@ -88,12 +82,12 @@ mv file_coding.gff ../../
 mv file_noncoding.gff ../../
 
 if ($cleanup == 1) then
- echo ""
- echo "Cleaning up.."
- cd ../
- rm -r fa
- rm -r gff
- rm -r headers
- rm final_headers.txt
- exit(0)
+    echo ""
+    echo "Cleaning up.."
+    cd ../
+    rm -r fa
+    rm -r gff
+    rm -r headers
+    rm final_headers.txt
+    exit(0)
 endif
