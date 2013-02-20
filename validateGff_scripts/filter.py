@@ -44,16 +44,17 @@ IDS.append(mydict)
 Protein_IDS=[]
 
 for dict in IDS:
-	keys=dict.keys()
+	keys=dict.values()
 	count=0
 	while count<len(dict):
 		for key in keys:
 			if key in features:
 				count=count+1
 	if count==len(dict):
-		Protein_IDS.append(dict.values())
+		Protein_IDS.append(dict.keys())
 	else:
 		Protein_IDS.append([])
+
 
 # Second pass
 index=0

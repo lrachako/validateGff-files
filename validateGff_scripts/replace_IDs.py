@@ -20,12 +20,13 @@ for i in range(len(f1)):
                 mydesc=desc.split(';') # Split the 9th column into individual fields
               	if feature=="gene":
 			gene_lines.append(counter)
+
 increment=0
 for id in gene_lines:
 	line_num=int(id)+increment
 	f1.insert(line_num,commentline)
 	increment+=1
-
+	
 
 ## Dictionary of the IDs and the corresponsing auto-generated ID
 mydict={}
@@ -40,11 +41,13 @@ for line in f1:
 			mydesc=cols[8].split(';')
 			for word in mydesc:
 				if "ID=" in word:
-					new=word.replace(id,new_id)
-					item=item.replace(word,new)
+					old="ID="+id
+					new="ID="+new_id
+					item=item.replace(old,new)
 				elif "Parent=" in word:
-					new=word.replace(id,new_id)
-					item=item.replace(word,new)	
+					old="Parent="+id
+					new="Parent="+new_id
+					item=item.replace(old,new)	
 			outFile.write(item)
 		gene_features=[]
         elif line[0][0]=="#":
@@ -62,14 +65,20 @@ for line in f1:
                                         count[feature]+=1
                                         new_id=feature+str(count[feature])
 		gene_features.append(line)	
+
+outFile.write(commentline)
+outFile.write("\n")
+
 for item in gene_features:
 	cols=item.strip().split('\t')
        	mydesc=cols[8].split(';')
       	for word in mydesc:
         	if "ID=" in word:
-                	new=word.replace(id,new_id)
-                       	item=item.replace(word,new)
-             	elif "Parent=" in word:
-                       	new=word.replace(id,new_id)
-                      	item=item.replace(word,new)
+			old="ID="+id
+                       	new="ID="+new_id
+			item=item.replace(old,new)
+             	if "Parent=" in word:
+			old="Parent="+id
+                      	new="Parent="+new_id
+			item=item.replace(old,new)
 	outFile.write(item)
