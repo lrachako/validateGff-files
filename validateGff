@@ -62,21 +62,22 @@ foreach file(*.gff)
 end
 echo "........done"
 
-echo "4. Sorting the features..."
-foreach file(*.replaced)
-    perl ../../validateGff_scripts/mygffsort.pl $file >$file.sorted
+cat *.replaced >file_replaced.gff
+
+perl ../../validateGff_scripts/process.pl <file_replaced.gff >file_processed.gff
+
+perl -ne '@f = split(/\t/); if(scalar(@f) == 9){ print if($f[2] eq "gene" or $f[2] eq "mRNA" or $f[2] eq "CDS" or $f[2] eq "exon"); }'<file_processed.gff >file.gff
+
+echo "4. Replacing the ID and Parent tags..."
+python ../../validateGff_scripts/replace_IDS.py file.gff file_idreplaced.gff
 echo "........done"
 
-cat *.sorted >file_sorted.gff
-perl -ne '@f = split(/\t/); if(scalar(@f) == 9){ print if($f[2] eq "gene" or $f[2] eq "mRNA" or $f[2] eq "CDS" or $f[2] eq "exon"); }'<file_sorted.gff >file.gff
-
-echo "5. Replacing the ID and Parent tags..."
-python ../../validateGff_scripts/replace_IDS.py file.gff file_replaced.gff
+echo "5. Filtering out non-protein coding features..."
+python ../../validateGff_scripts/filter.py file_idreplaced.gff file_cod.gff file_noncoding.gff
 echo "........done"
 
-echo "6. Filtering out non-protein coding features..."
-python ../../validateGff_scripts/filter.py file_replaced.gff file_coding.gff file_noncoding.gff
-echo "........done"
+echo "6. Sorting the features..."
+gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
 
 mv file_coding.gff ../../
 mv file_noncoding.gff ../../
