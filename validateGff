@@ -117,6 +117,7 @@ then
 	echo "6. Sorting the features..."
 	gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
 	mv file_coding.gff ../../
+	echo "Protein coding feature file - file_coding.gff is ready and is in your working directory."
 else
 	echo "Protein coding feature file is empty"
 fi
@@ -124,8 +125,6 @@ fi
 if [ -s file_noncoding.gff ]
 then
 	gt gff3 -sort -retainids -tidy file_noncod.gff >file_noncoding.gff	
-else
-	echo "Non-Protein coding feature file in empty"
 fi
 
 
