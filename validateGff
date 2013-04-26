@@ -1,94 +1,142 @@
-#!/bin/tcsh
-##This script takes in a directory consisting of GenBank files as the input, converts them into GFF3 files, sorts, filters and validates them.
-##The output of this script is a single GFF3 file consisting of information on the protein-coding features.
+#!/usr/bin/env bash
+# validateGff 
 
-set argv=(`getopt g:c $*`)
-set gbkfile=0
-set cleanup=0
-set i=1
+print_usage()
+{
+cat <<EOF
+Usage : sh validateGff [options] -p BioPerl_dir -v validateGFF_dir  input_directory 
+Options:
+ -c 	Cleanup all intermediate files
+ -o 	Extension for your output file
+ -h 	Print this help message and exit
+ -g	Input if a GFF3 file	
+ -b	Input is  GenBank file
+ -p	Directory containing BioPerl
+ -v	Directory containing validateGFF	
+EOF
+}
 
-while ($i < $#argv)
-    switch ($argv[$i])
-        case -g*:
-            @ i = $i + 1
-            set gbkfile = $argv[$i]
-            breaksw
-        case -c*:
-            set cleanup = 1
-            breaksw
-        default:
-            breaksw
-    endsw
-@ i = $i + 1
-end
+CLEANUP=0
+VERBOSE=0
+OUTFILE="file"
+GENBANK=0
+GFF=0
+
+while getopts "cho:b:v:p:" OPTION
+do
+  case $OPTION in
+  c)
+    	CLEANUP=1
+    	;;
+  h)
+   	print_usage
+   	exit 0
+   	;;
+  o)
+   	OUTFILE=$OPTARG
+   	;;
+  p)
+        BIOPERL=$OPTARG
+  	;;
+  v)
+	vGFF=$OPTARG
+   	;;
+   esac
+done
+shift $((OPTIND-1))
+
+gbk_dir=$1
+
+cd $gbk_dir
 
 
-if ($gbkfile == 0)  then
-    echo ""
-    echo "USAGE: $0 [options]"
-    echo "Example: $0 -g gbk -c"
-    echo "Options:"
-    echo " -g        : Directory containing files in GenBank (full) format"
-    echo " -c        : Cleanup all the intermediate files"
-   exit(0)
-endif
+if [ "$(ls -A $gbk_dir)" ];
+then
+	echo "Not empty GenBank directory"
+	echo "Number of input GenBank files : $(ls -A $gbk_dir|wc -l)"
+else
+	echo "Empty directory"
+	exit 0
+fi
 
-echo "1. Extracting information from the GenBank file..."
-cd $gbkfile
-foreach file(*)
-    python ../validateGff_scripts/extract_headers.py $file $file.headers
-end
-echo "Done headers"
+for file in *.gbk
+do
+	echo "Processing $file"
+ 	echo "1. Extracting header information from the GenBank file..."
+	python $vGFF/validateGff_scripts/extract_headers.py $file $file.headers
+done
+echo "..Done"
+	
 mkdir headers
 mv *.headers headers
 cat headers/* >final_headers.txt
 
-echo "2. Converting GenBank file to gff file ..."
-foreach file(*.gbk)
-	perl /usr/local/src/BIOPERL/bioperl-live/scripts/Bio-DB-GFF/bp_genbank2gff3.pl -y $file
-end
-echo "........done"
-
+echo "2. Converting GenBank file to GFF file ..."
+for file in *.gbk
+do
+	echo "BioPerl:Processing $file"
+       	perl $BIOPERL/bioperl-live/scripts/Bio-DB-GFF/bp_genbank2gff3.pl -y $file
+done
+echo "..Done"
 mkdir gff
 mkdir fa
-
 mv *.gff gff
 mv *.fa fa
 
-echo "3. Replacing identifiers..."
 cd gff
-foreach file(*.gff)
-    python ../../validateGff_scripts/replace_headers.py $file ../final_headers.txt $file.replaced
-end
-echo "........done"
+echo "Number of GFF files created : $(ls -A $gff|wc -l)"
 
+echo "3. Replacing identifiers..."
+	
+for file in *.gff
+do
+	if [ -s $file ]
+	then
+  		python $vGFF/validateGff_scripts/replace_headers.py $file ../final_headers.txt $file.replaced
+	else
+		echo "Empty GFF file : $file"
+	fi
+done
+
+echo "..Done"
 cat *.replaced >file_replaced.gff
 
-perl ../../validateGff_scripts/process.pl <file_replaced.gff >file_processed.gff
-
+perl $vGFF/validateGff_scripts/process.pl <$file >file_processed.gff
 perl -ne '@f = split(/\t/); if(scalar(@f) == 9){ print if($f[2] eq "gene" or $f[2] eq "mRNA" or $f[2] eq "CDS" or $f[2] eq "exon"); }'<file_processed.gff >file.gff
 
 echo "4. Replacing the ID and Parent tags..."
-python ../../validateGff_scripts/replace_IDS.py file.gff file_idreplaced.gff
-echo "........done"
+python $vGFF/validateGff_scripts/replace_IDS.py file.gff file_idreplaced.gff
+echo "..Done"
 
 echo "5. Filtering out non-protein coding features..."
-python ../../validateGff_scripts/filter.py file_idreplaced.gff file_cod.gff file_noncoding.gff
-echo "........done"
+python $vGFF/validateGff_scripts/filter.py file_idreplaced.gff file_cod.gff file_noncod.gff
+echo "..Done"
 
-echo "6. Sorting the features..."
-gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
+if [ -s file_cod.gff ]
+then
+	echo "6. Sorting the features..."
+	gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
+	mv file_coding.gff ../../
+else
+	echo "Protein coding feature file is empty"
+fi
 
-mv file_coding.gff ../../
-mv file_noncoding.gff ../../
+if [ -s file_noncoding.gff ]
+then
+	gt gff3 -sort -retainids -tidy file_noncod.gff >file_noncoding.gff	
+else
+	echo "Non-Protein coding feature file in empty"
+fi
 
-if ($cleanup == 1) then
-    echo ""
+
+if [ $CLEANUP -eq 1 ] 
+then
     echo "Cleaning up.."
     cd ../
     rm -r fa
     rm -r gff
     rm -r headers
     rm final_headers.txt
-    exit(0)
-endif
+    exit 0
+fi
+
