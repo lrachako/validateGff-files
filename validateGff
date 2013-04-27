@@ -1,72 +1,66 @@
 #!/usr/bin/env bash
-# validateGff 
+# validateGff
 
 print_usage()
 {
-cat <<EOF
-Usage : sh validateGff [options] -p BioPerl_dir -v validateGFF_dir  input_directory 
-Options:
- -c 	Cleanup all intermediate files
- -o 	Extension for your output file
- -h 	Print this help message and exit
- -g	Input if a GFF3 file	
- -b	Input is  GenBank file
- -p	Directory containing BioPerl
- -v	Directory containing validateGFF	
+  cat <<EOF
+Usage: sh validateGff [options] input_directory
+ Options:
+   -c    Clean up all intermediate files
+   -h    Print this help message and exit
+   -p    Main BioPerl directory; default is /usr/local/src/bioperl-live
+   -v    Main validateGFF directory; default is current working directory
 EOF
 }
 
+BIOPERL=/usr/local/src/bioperl-live
 CLEANUP=0
-VERBOSE=0
-OUTFILE="file"
-GENBANK=0
-GFF=0
+vGFF=`pwd`
 
-while getopts "cho:b:v:p:" OPTION
+while getopts "chp:v:" OPTION
 do
   case $OPTION in
   c)
-    	CLEANUP=1
-    	;;
+    CLEANUP=1
+    ;;
   h)
-   	print_usage
-   	exit 0
-   	;;
-  o)
-   	OUTFILE=$OPTARG
-   	;;
+    print_usage
+    exit 0
+    ;;
   p)
-        BIOPERL=$OPTARG
-  	;;
+    BIOPERL=$OPTARG
+    ;;
   v)
-	vGFF=$OPTARG
-   	;;
-   esac
+    vGFF=$OPTARG
+    ;;
+  esac
 done
 shift $((OPTIND-1))
-
+# Here you should verify that the correct number of arguments was given and exit
+# if not
 gbk_dir=$1
 
 cd $gbk_dir
 
-
-if [ "$(ls -A $gbk_dir)" ];
+# ls $gbk_dir is wrong; you've already changed directory to $gbk_dir, so you 
+# want to ls *.gbk
+ngbk_files=`ls -A *.gbk | wc -l | tr -d ' '`
+if [ $ngbk_files > 0 ]
 then
-	echo "Not empty GenBank directory"
-	echo "Number of input GenBank files : $(ls -A $gbk_dir|wc -l)"
+  echo "Number of input GenBank files: $ngbk_files"
 else
-	echo "Empty directory"
-	exit 0
+  echo "No GenBank files found in $gbk_dir"
+  exit 1
 fi
 
 for file in *.gbk
 do
-	echo "Processing $file"
- 	echo "1. Extracting header information from the GenBank file..."
-	python $vGFF/validateGff_scripts/extract_headers.py $file $file.headers
+  echo "Processing $file"
+  echo "1. Extracting header information from the GenBank file..."
+  python $vGFF/validateGff_scripts/extract_headers.py $file $file.headers
 done
 echo "..Done"
-	
+
 mkdir headers
 mv *.headers headers
 cat headers/* >final_headers.txt
@@ -74,28 +68,39 @@ cat headers/* >final_headers.txt
 echo "2. Converting GenBank file to GFF file ..."
 for file in *.gbk
 do
-	echo "BioPerl:Processing $file"
-       	perl $BIOPERL/bioperl-live/scripts/Bio-DB-GFF/bp_genbank2gff3.pl -y $file
+  echo "BioPerl: processing $file"
+  perl $BIOPERL/bioperl-live/scripts/Bio-DB-GFF/bp_genbank2gff3.pl -y $file
 done
 echo "..Done"
 mkdir gff
 mkdir fa
+# Something we'll eventually want to fix; these commands assume the user
+# directory doesn't also include files ending in ".gff" or ".fa". If it does,
+# then they will be moved and then later removed during cleanup, without the
+# user's permission. Bad news. Eventually, I'd recommend you don't modify the
+# directory containing the GenBank files but use a temporary directory instead.
+# That's not a top priority this instant, but something that would be much
+# better in the long run.
 mv *.gff gff
 mv *.fa fa
 
 cd gff
-echo "Number of GFF files created : $(ls -A $gff|wc -l)"
+echo "Number of GFF files created: $(ls -A $gff | wc -l)"
+# What should you do if the number of GFF files created is 0? You need to keep
+# doing this throughout the script to make sure it quits at the earliest
+# possible point (really helps identify where the problem is). I'm going to
+# stop making suggestions at this point, but you need to continue doing so.
 
 echo "3. Replacing identifiers..."
-	
+
 for file in *.gff
 do
-	if [ -s $file ]
-	then
-  		python $vGFF/validateGff_scripts/replace_headers.py $file ../final_headers.txt $file.replaced
-	else
-		echo "Empty GFF file : $file"
-	fi
+  if [ -s $file ]
+  then
+    python $vGFF/validateGff_scripts/replace_headers.py $file ../final_headers.txt $file.replaced
+  else
+    echo "Empty GFF file: $file"
+  fi
 done
 
 echo "..Done"
@@ -114,21 +119,21 @@ echo "..Done"
 
 if [ -s file_cod.gff ]
 then
-	echo "6. Sorting the features..."
-	gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
-	mv file_coding.gff ../../
-	echo "Protein coding feature file - file_coding.gff is ready and is in your working directory."
+  echo "6. Sorting the features..."
+  gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
+  mv file_coding.gff ../../
+  echo "Protein coding feature file - file_coding.gff is ready and is in your working directory."
 else
-	echo "Protein coding feature file is empty"
+  echo "Protein coding feature file is empty"
 fi
 
 if [ -s file_noncoding.gff ]
 then
-	gt gff3 -sort -retainids -tidy file_noncod.gff >file_noncoding.gff	
+  gt gff3 -sort -retainids -tidy file_noncod.gff >file_noncoding.gff
 fi
 
 
-if [ $CLEANUP -eq 1 ] 
+if [ $CLEANUP -eq 1 ]
 then
     echo "Cleaning up.."
     cd ../
