@@ -1,55 +1,58 @@
-0README- validateGFF
+validateGFF
 
-- validateGff is a validator that is created to help one validate their gff file with respect to the following measures:
-1. Sort the genomic features
-2. Give unique IDs to each genomic feature
-3. Filter out the non protein-coding features
-4. Give uniform seqids (Column 1) to all the files under comparison
+validateGff is a validator that is created to help one validate their gff file
+with respect to the following measures:
+  1. Sort the genomic features
+  2. Give unique IDs to each genomic feature
+  3. Filter out the non protein-coding features
+  4. Give uniform seqids (Column 1) to all the files under comparison
 
 Overview:
-validateGff is a combination of Perl and Python scripts.
-It also uses the BioPerl module and GenomeTools.
+validateGff is a combination of Perl and Python scripts. It also uses the
+BioPerl module and GenomeTools.
 
 Input:
 This script is designed to take of the following type:
-1. A directory containing GenBank file/files 
+  1. A directory containing GenBank file/files 
 
-GenBank input:
-- If the input is of the type GenBank, gffValidate used the converter bp_genbank2gff3 from the BioPerl distribution to convert into a gff3 format.
-- This script splits the individual GenBank files from the input directory based on their seqids and creates a flat file, tab-delimited gff3 format for each of them.
+Input: GenBank files
+  - If the input is of the type GenBank, gffValidate used the converter
+    bp_genbank2gff3 from the BioPerl distribution to convert into a gff3 format.
+  - This script splits the individual GenBank files from the input directory
+    based on their seqids and creates a flat file, tab-delimited gff3 format for
+    each of them.
 
-Output:
-file_coding.gff
-The final output of validateGff is a valid, sorted gff3 file containing information about the protein-coding features each having unique identifiers.
-This output file can be visualized on a genome browser such as xGDBvm and can be compared using a gene structure annotation program such a ParsEval.
+Output: file_coding.gff
+The final output of validateGff is a valid, sorted gff3 file containing
+information about the protein-coding features each having unique identifiers.
+This output file can be visualized on a genome browser such as xGDBvm and can be
+compared using a gene structure annotation program such a ParsEval.
 
 Requirements:
-validateGff can be run on Unix systems.
-It requires the following:
-1. Perl (any version)
-http://www.perl.org/get.html
-2. Python (2.7.3 or 3.3.0)
-http://www.python.org/getit/
-3. Bioperl 
-4. GenomeTools Library
+validateGff can be run on Unix systems. It requires the following:
+  1. Perl (tested on versions 5.8 and 5.12)
+  2. Python (2.7.3 or 3.3.0)
+  3. BioPerl
+  4. GenomeTools library
 
 Instructions:
-The files validateGff and the directory validateGff_scripts have to be placed in your working directory.
-The input directory containing the GenBank files has to be placed in the SAME working directory. 
-The output file named, file_coding.gff will be created in the SAME working directory.
-The non protein-coding features are given in the output file file_noncoding.gff
+The files validateGff and the directory validateGff_scripts have to be placed in
+your working directory. The input directory containing the GenBank files has to
+be placed in the SAME working directory. The output file named file_coding.gff
+will be created in the SAME working directory. The non protein-coding features
+are given in the output file file_noncoding.gff.
 
 Help:
-./validateGff 
+  ./validateGff -h
 
 Example data set:
-The folder example contains a sample GenBank file for the organism Apis mellifera.
-In order to run validateGff for the example data set:
-./validateGff -g example/ 
+The folder example contains a sample GenBank file for the organism
+Apis mellifera. In order to run validateGff for the example data set:
+  ./validateGff -g example/ 
 
 The output file:
- file_coding.gff --> Final output file having protein coding features
- file_noncoding.gff --> Final output file having non protein coding features
+  file_coding.gff --> Final output file having protein coding features
+  file_noncoding.gff --> Final output file having non protein coding features
 
 
 
