@@ -36,16 +36,14 @@ do
   esac
 done
 shift $((OPTIND-1))
-
-if [ $# -lt 1 ]
+if [ $# -ne 1 ]
 then 
-  echo "Insuffucient number of arguments"
+  echo "Error: expected 1 argument, got $#"
   print_usage
-  exit 0
+  exit 1
 fi
 
 gbk_dir=$1
-
 cd $gbk_dir
 
 ngbk_files=`ls -A *.gbk | wc -l | tr -d ' '`
@@ -142,7 +140,7 @@ then
   gt gff3 -sort -retainids -tidy file_cod.gff >file_coding.gff
   mv file_coding.gff $vGFF
   echo "Protein coding feature file - file_coding.gff is ready and is in your working directory."
-  else
+else
   echo "Protein coding feature file is empty"
 fi
 
@@ -160,5 +158,4 @@ then
     rm -r gff
     rm -r headers
     rm final_headers.txt
-    exit 1
 fi
